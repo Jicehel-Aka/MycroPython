@@ -122,13 +122,16 @@ bool file_exists(const char* path) {
     return stat(path, &st) == 0;
 }
 
-bool write_file(const char* abs_path, const uint8_t* data, uint32_t len) {
-    char dir[790];
-    snprintf(dir, sizeof dir, "%s", abs_path);   // abs_path : déjà borné par l'appelant (join_path) -- copie simple, pas d'assemblage ici
-    char* slash = strrchr(dir, '/');
+// `abs_path` non constant à dessein : on modifie temporairement son dernier '/' en place (comme
+// mkdir_p le fait déjà sur son propre argument) au lieu de le recopier dans un tampon séparé -- une
+// copie devrait faire au moins aussi grand que le tampon RÉEL de l'appelant (MAX_PATH + 660, voir
+// handle_put/find_free_name), que ce fichier n'a aucun moyen de connaître ni de garantir au compilateur.
+bool write_file(char* abs_path, const uint8_t* data, uint32_t len) {
+    char* slash = strrchr(abs_path, '/');
     if (slash) {
         *slash = 0;
-        mkdir_p(dir);
+        mkdir_p(abs_path);
+        *slash = '/';
     }
     FILE* f = fopen(abs_path, "wb");
     if (!f) return false;
@@ -169,7 +172,13 @@ bool find_free_name(const char* root, const char* rel, char* out_rel, size_t out
         char abs_path[MAX_PATH + 660];
         if (!join_path(abs_path, sizeof abs_path, root, candidate)) continue;   // ne devrait jamais arriver (candidate < MAX_PATH+40) ; on passe au suivant plutôt que planter
         if (!file_exists(abs_path)) {
-            snprintf(out_rel, out_n, "%s", candidate);
+            // out_rel (fourni par l'appelant, MAX_PATH octets -- voir handle_put) peut être PLUS PETIT
+            // que candidate (MAX_PATH + 40) : le compilateur ne peut pas prouver que le contenu réel
+            // tient, à raison -- un candidate légitimement plus long que MAX_PATH doit être écarté, pas
+            // tronqué en un nom différent de celui vérifié juste au-dessus par file_exists().
+            size_t candidate_len = strlen(candidate);
+            if (candidate_len >= out_n) continue;
+            memcpy(out_rel, candidate, candidate_len + 1);
             return true;
         }
     }
