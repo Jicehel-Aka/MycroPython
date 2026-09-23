@@ -124,7 +124,7 @@ bool file_exists(const char* path) {
 
 bool write_file(const char* abs_path, const uint8_t* data, uint32_t len) {
     char dir[790];
-    snprintf(dir, sizeof dir, "%s", abs_path);
+    snprintf(dir, sizeof dir, "%s", abs_path);   // abs_path : déjà borné par l'appelant (join_path) -- copie simple, pas d'assemblage ici
     char* slash = strrchr(dir, '/');
     if (slash) {
         *slash = 0;
@@ -135,6 +135,23 @@ bool write_file(const char* abs_path, const uint8_t* data, uint32_t len) {
     size_t put = fwrite(data, 1, len, f);
     fclose(f);
     return put == len;
+}
+
+// Assemble root + "/" + rel dans out (out_n octets), SANS jamais dépendre de snprintf pour ça : le
+// compilateur ESP-IDF (-Werror=format-truncation) ne peut pas prouver qu'un %s/%s tient dans un
+// tampon de taille fixe quand root/rel sont eux-mêmes des tampons (pas des litéraux), et à raison —
+// root peut dépasser 600 octets une fois placé après un long chemin AKA/languages.csv, rel jusqu'à
+// MAX_PATH : un tampon de 790 octets peut réellement déborder, pas seulement déclencher l'avertissement.
+// Renvoie false (plutôt que de tronquer en silence) si ça ne tient pas ; l'appelant traite ça comme un
+// chemin invalide (BAD_PATH), jamais comme une écriture partielle à un chemin tronqué.
+bool join_path(char* out, size_t out_n, const char* root, const char* rel) {
+    size_t root_len = strlen(root), rel_len = strlen(rel);
+    if (root_len + rel_len + 2 > out_n) return false;   // +1 '/' +1 '\0' ; que des additions, jamais de soustraction sur des size_t
+    memcpy(out, root, root_len);
+    out[root_len] = '/';
+    memcpy(out + root_len + 1, rel, rel_len);
+    out[root_len + 1 + rel_len] = '\0';
+    return true;
 }
 
 bool find_free_name(const char* root, const char* rel, char* out_rel, size_t out_n) {
@@ -148,20 +165,13 @@ bool find_free_name(const char* root, const char* rel, char* out_rel, size_t out
     }
     for (int n = 2; n <= 20; ++n) {
         char candidate[MAX_PATH + 40];
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-truncation"
-#endif
-        snprintf(candidate, sizeof candidate, "%s (%d)%s", base, n, ext);
-        char abs_path[1200];
-        snprintf(abs_path, sizeof abs_path, "%s/%s", root, candidate);
+        snprintf(candidate, sizeof candidate, "%s (%d)%s", base, n, ext);   // base/ext : tampons fixes connus du compilateur, pas de troncature possible ici
+        char abs_path[MAX_PATH + 660];
+        if (!join_path(abs_path, sizeof abs_path, root, candidate)) continue;   // ne devrait jamais arriver (candidate < MAX_PATH+40) ; on passe au suivant plutôt que planter
         if (!file_exists(abs_path)) {
             snprintf(out_rel, out_n, "%s", candidate);
             return true;
         }
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
     }
     return false;
 }
@@ -313,8 +323,12 @@ void handle_put(const char* root, uint32_t deadline_ms) {
 
     char final_rel[MAX_PATH];
     snprintf(final_rel, sizeof final_rel, "%s", path);
-    char abs_path[790];
-    snprintf(abs_path, sizeof abs_path, "%s/%s", root, final_rel);
+    char abs_path[MAX_PATH + 660];
+    if (!join_path(abs_path, sizeof abs_path, root, final_rel)) {
+        free(data);
+        send_reply(ST_BAD_PATH);
+        return;
+    }
 
     if (file_exists(abs_path)) {
         Decision d = wait_for_decision(final_rel, aka_hal_ticks_ms() + DECISION_TIMEOUT_MS);
@@ -331,7 +345,11 @@ void handle_put(const char* root, uint32_t deadline_ms) {
                 return;
             }
             snprintf(final_rel, sizeof final_rel, "%s", renamed);
-            snprintf(abs_path, sizeof abs_path, "%s/%s", root, final_rel);
+            if (!join_path(abs_path, sizeof abs_path, root, final_rel)) {
+                free(data);
+                send_reply(ST_BAD_PATH);
+                return;
+            }
         }
     }
 
