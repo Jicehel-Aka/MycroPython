@@ -1,0 +1,7 @@
+{
+  "title": "MicroPython",
+  "description": "Interprete MicroPython embarque : execute des jeux ecrits en Python (.py) depuis la carte SD.",
+  "author": "MicroPython + AKA Port Studio",
+  "version": "0.1.0",
+  "date": "2026-08-10"
+}

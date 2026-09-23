@@ -1,0 +1,16 @@
+{
+  "MENU_TITLE": "MENU",
+  "MENU_RESUME": "Riprendi",
+  "MENU_GAME_SELECT": "Scegli gioco",
+  "MENU_CONTROLS": "Comandi",
+  "MENU_LANGUAGE": "Lingua",
+  "MENU_VOLUME": "Volume",
+  "MENU_CREDITS": "Crediti",
+  "MENU_RETURN_LOADER": "Torna al loader",
+  "MENU_LEGEND": "A: OK   C: Annulla",
+  "MENU_VOL_MUSIC": "Musica",
+  "MENU_VOL_SFX": "Suoni",
+  "CREDITS_AUTHOR": "Autore:",
+  "CREDITS_LICENSE": "Licenza:",
+  "CREDITS_SOURCE": "Fonte:"
+}

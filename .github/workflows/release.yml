@@ -1,0 +1,144 @@
+name: Build and release
+
+# UN SEUL workflow, sur le meme modele que celui d'AKA-Love (Jicehel-Aka/<akalove>) : a chaque mise a
+# jour de la branche principale, compile le firmware ESP-IDF et publie une Release GitHub en
+# incrementant la version MINEURE (v1.4.2 -> v1.5.0). Rien n'est publie si la compilation echoue.
+#
+# Pull request : la compilation tourne, sans release. Declenchement manuel : compile et publie comme
+# un push.
+#
+# Ce depot vend deja sa propre copie de components/gamebuino (contrairement a AKA-Love, qui l'attend
+# copiee a la main) : rien a verifier avant de compiler, seulement corriger sa casse pour Linux
+# (tools/fix_gamebuino_case.py -- le meme script que celui d'AKA-Love, copie ici tel quel).
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore: ['**.md', 'LICENSE*', '.gitignore']
+  pull_request:
+    paths-ignore: ['**.md', 'LICENSE*', '.gitignore']
+  workflow_dispatch:
+
+permissions:
+  contents: write # creer la Release et y attacher les fichiers
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  aka:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Remove stale build cache
+        run: rm -rf build
+
+      - name: Fix gamebuino component case (Linux)
+        run: python3 tools/fix_gamebuino_case.py components/gamebuino
+
+      # ÉTAPE INDISPENSABLE, absente d'une première version de ce fichier : idf.py build échoue sans
+      # elle (components/micropython/micropython_embed/ n'existe pas encore). Reproduit exactement la
+      # procédure documentée dans build_micropython_embed.sh et Compiler_MicroPython_AKA.txt, avec
+      # make/python du système Linux à la place des chemins MSYS2 (Windows) codés en dur par défaut
+      # dans le script. Aucune version de MicroPython n'est épinglée (le script clone la branche par
+      # défaut) -- déjà le cas dans le script fourni, pas quelque chose que ce workflow change ; un
+      # changement chez MicroPython upstream pourrait donc un jour faire échouer cette étape, sans lien
+      # avec ce dépôt.
+      - name: Clone MicroPython upstream
+        run: git clone --depth 1 https://github.com/micropython/micropython.git /tmp/micropython
+
+      - name: Generate micropython_embed (build_micropython_embed.sh)
+        run: |
+          chmod +x build_micropython_embed.sh
+          MICROPYTHON_TOP=/tmp/micropython MAKE_BIN=make PYTHON_BIN=python3 ./build_micropython_embed.sh
+          test -d components/micropython/micropython_embed
+
+      - name: Build with ESP-IDF
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.1
+          target: esp32s3
+          path: '.'
+
+      # build/micropython_aka.bin (nom du projet CMake) -> firmware.bin, le nom attendu par le loader
+      # AKA. Le bootloader et la table de partitions ne sont volontairement PAS publies : les flasher
+      # ecraserait le loader de la console.
+      # sdcard_files/py/          : main.py (lanceur) + les jeux d'exemple, A PLAT, a la racine de la carte SD
+      # sdcard_files/micropython/ : firmware.bin, meta.json, Picture.png, screen.bmp, docs/ (cartouche du loader)
+      # sdcard_files/AKA/         : languages.csv, PARTAGE avec les autres firmwares AKA (voir le depot
+      #                             AKA-Love, docs/PROTOCOLE_TRANSFERT.md) -- pas encore lu par CE firmware
+      #                             (transfert de fichiers non implemente ici), mais deja au bon endroit
+      #                             pour le jour ou ce sera fait, sans nouvelle release necessaire pour
+      #                             changer juste un chemin.
+      - name: Package
+        run: |
+          test -f build/micropython_aka.bin
+          mkdir -p out/micropython out/py out/AKA
+          cp -r sdcard_files/micropython/. out/micropython/
+          cp -r sdcard_files/py/. out/py/
+          if [ -d sdcard_files/AKA ]; then cp -r sdcard_files/AKA/. out/AKA/; fi
+          rm -rf out/py/__pycache__
+          cp build/micropython_aka.bin out/micropython/firmware.bin
+          cp build/micropython_aka.bin firmware.bin
+          (cd out && zip -r ../micropython-aka-sdcard.zip micropython py AKA)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aka
+          path: |
+            firmware.bin
+            micropython-aka-sdcard.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    if: github.event_name != 'pull_request'
+    needs: [aka]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Next minor version
+        id: version
+        run: |
+          last=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          last=${last:-v0.0.0}
+          IFS=. read -r major minor _ <<< "${last#v}"
+          echo "tag=v${major}.$((minor + 1)).0" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          cd artifacts
+          for f in micropython-aka-*.zip; do mv "$f" "${f%.zip}-${TAG}.zip"; done
+          ls -l
+          gh release create "$TAG" firmware.bin micropython-aka-*.zip \
+            --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+
+      # Optionnel : prévient le dépôt "AKA Toolkit" (assemblage combiné avec AKA-Love et AKA-IDE, voir
+      # ce dépôt) qu'une nouvelle release est disponible ici. Nécessite un secret TOOLKIT_DISPATCH_TOKEN
+      # (un Personal Access Token avec le droit "repo" sur le dépôt du Toolkit) ; sans ce secret, cette
+      # étape échoue silencieusement (`|| true`) sans bloquer la release ci-dessus.
+      - name: Notify AKA Toolkit (optional)
+        if: always() && env.TOOLKIT_DISPATCH_TOKEN != ''
+        env:
+          TOOLKIT_DISPATCH_TOKEN: ${{ secrets.TOOLKIT_DISPATCH_TOKEN }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: token $TOOLKIT_DISPATCH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/Jicehel-Aka/AKA-Toolkit/dispatches" \
+            -d '{"event_type":"aka-source-released","client_payload":{"repo":"'"$GH_REPO"'","tag":"'"$TAG"'"}}' \
+            || true

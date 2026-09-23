@@ -1,0 +1,45 @@
+Voici la marche à suivre pour compiler micropython, étape par étape, sur une machine Windows.
+
+1. Ouvrir le bon terminal bash (msys2 MinGW64)
+Le script a besoin de make, gcc (mingw64) et python. Le plus simple est d'utiliser le shell MSYS2 MinGW 64-bit installé généralement sur C:/msys64.
+
+Menu Démarrer → tape « MSYS2 MINGW64 » → ouvre-le. (C'est bien la version MINGW64, l'icône bleue.
+Une fenêtre de terminal bash s'ouvre.
+
+2. Se placer à la racine du projet
+Dans msys2, ton disque C: s'écrit /c/… et il faut échapper les espaces (ou mettre le chemin entre guillemets) :
+
+par exemple: cd "/c/Users/jean_/OneDrive/Documents 1/Aka/micropython_aka"
+Vérifie que le script est bien là :
+ls build_micropython_embed.sh
+
+3. (Optionnel mais conseillé) Vérifier les prérequis
+
+ls /c/Perso/micropython/ports/embed   # le checkout MicroPython attendu par défaut
+which make gcc python                  # les 3 outils doivent répondre
+Si MicroPython n'est pas dans /c/Perso/micropython, tu le préciseras à l'appel (voir étape 4).
+Si make ou gcc manquent, installe-les : pacman -S make mingw-w64-x86_64-gcc python.
+
+4. Lancer la génération
+Pour repartir propre (recommandé si tu as touché mpconfigport.h ou les QSTR de modaka.c) :
+./build_micropython_embed.sh clean
+./build_micropython_embed.sh
+Si ton MicroPython est ailleurs que /c/Perso/micropython :
+
+MICROPYTHON_TOP=/c/chemin/vers/micropython ./build_micropython_embed.sh
+Tu dois voir défiler :
+
+>> Generation du coeur MicroPython
+   ...
+>> OK. Tu peux maintenant lancer : idf.py build
+Cela (re)crée components/micropython/micropython_embed/.
+
+5. Ensuite : compiler côté ESP-IDF
+⚠️ Cette étape-là n'est pas dans msys2 : elle se fait dans le terminal ESP-IDF (PowerShell « ESP-IDF Command Prompt »), depuis le même dossier projet :
+
+idf.py build
+idf.py -p COMx flash monitor
+Deux points d'attention :
+
+N'écris pas bash build_micropython_embed.sh depuis PowerShell : le script a besoin de l'environnement mingw64 (le export PATH="/mingw64/bin:$PATH" de la ligne 20 suppose un vrai bash msys2).
+Le ./ au début est important (./build_micropython_embed.sh), sinon bash ne le trouve pas dans le répertoire courant.

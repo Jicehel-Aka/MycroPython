@@ -1,0 +1,17 @@
+# Sortie de build ESP-IDF
+/build/
+
+# sdkconfig effectif (genere depuis sdkconfig.defaults)
+/sdkconfig
+/sdkconfig.old
+sdkconfig.orig_reference
+
+# Coeur MicroPython GENERE par build_micropython_embed.sh
+/components/micropython/micropython_embed/
+/components/micropython/build-embed/
+
+# Editeur / OS
+*.swp
+*~
+Thumbs.db
+.DS_Store

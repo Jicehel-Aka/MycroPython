@@ -1,0 +1,16 @@
+{
+  "MENU_TITLE": "MENU",
+  "MENU_RESUME": "Fortsetzen",
+  "MENU_GAME_SELECT": "Spiel waehlen",
+  "MENU_CONTROLS": "Steuerung",
+  "MENU_LANGUAGE": "Sprache",
+  "MENU_VOLUME": "Lautstaerke",
+  "MENU_CREDITS": "Credits",
+  "MENU_RETURN_LOADER": "Zurueck zum Loader",
+  "MENU_LEGEND": "A: OK   C: Abbruch",
+  "MENU_VOL_MUSIC": "Musik",
+  "MENU_VOL_SFX": "Effekte",
+  "CREDITS_AUTHOR": "Autor:",
+  "CREDITS_LICENSE": "Lizenz:",
+  "CREDITS_SOURCE": "Quelle:"
+}

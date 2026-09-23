@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "micropython",
+  "title": "MicroPython",
+  "version": "0.1.0",
+  "platform": "AKA",
+  "port_level": "runtime",
+  "author": "MicroPython (Damien P. George)",
+  "porter": "AKA Port Studio",
+  "license": "MIT",
+  "copyright": "2013-2026 Damien P. George",
+  "source_repository": "https://github.com/micropython/micropython",
+  "description": "Interpreteur MicroPython pour l'AKA : execute des jeux ecrits en Python (.py) depuis la carte SD, via le module natif 'aka'.",
+  "supports_save": true,
+  "supports_screenshot": true,
+  "supports_languages": true,
+  "save_directory": "/sdcard/micropython/"
+}

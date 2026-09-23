@@ -1,0 +1,28 @@
+# Valeurs par defaut pour l'app AKA MicroPython (ESP32-S3, 8 Mo, PSRAM octale).
+# Repris du portage oilpanic_aka. Le sdkconfig effectif est genere a partir
+# d'ici au premier `idf.py build`.
+
+CONFIG_IDF_TARGET="esp32s3"
+
+# Flash 8 Mo + table de partitions custom (identique au loader AKA).
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="8MB"
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# PSRAM (tas GC MicroPython) — mode octal 80 MHz comme la console AKA.
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_USE_MALLOC=y
+
+# MicroPython s'execute dans la tache app_main : pile confortable.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=32768
+
+# Optimisation taille (le coeur MicroPython + gamebuino tiennent mieux).
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
+# Noms de fichiers longs sur la carte SD (necessaire : "micropython" depasse
+# la limite du format court 8.3 -- BUG TROUVE ET CORRIGE, mkdir echouait avec
+# errno=22/EINVAL pour tout dossier d'app dont le nom depasse 8 caracteres).
+CONFIG_FATFS_LFN_HEAP=y
