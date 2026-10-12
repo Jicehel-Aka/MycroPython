@@ -142,5 +142,37 @@ check("L 3.0" in out, "math: math.log10 correct (fonctions spéciales activées)
 check("Q 1.4142" in out, "math: math.sqrt correct")
 check("E 2.7182" in out or "E 2.7183" in out, "math: math.exp correct")
 
+# --- Vérif ciblée : modules standard activés --------------------------------
+# Chacun doit s'importer ET exposer ses fonctions clés (pas seulement exister).
+print("[modules — disponibilité]")
+for m in ["math", "struct", "array", "collections", "micropython",
+          "random", "json", "time"]:
+    code, out = run_source("import " + m + "\nprint('IMP')\n")
+    check(code == 0 and "IMP" in out, "module présent : " + m)
+
+print("[modules — fonctions clés]")
+code, out = run_source(
+    "import struct, array, collections, random, json, time, micropython\n"
+    "random.seed(1)\n"
+    "print('ST', struct.unpack('<h', struct.pack('<h', -5))[0])\n"
+    "print('AR', sum(array.array('i', [1, 2, 3])))\n"
+    "print('NT', collections.namedtuple('P', ['a', 'b'])(4, 9).b)\n"
+    "print('DQ', (lambda d: (d.append(1), d.popleft())[1])(collections.deque((), 4)))\n"
+    "print('RI', 1 if 1 <= random.randint(1, 6) <= 6 else 0)\n"
+    "print('CH', 1 if random.choice([7, 8, 9]) in (7, 8, 9) else 0)\n"
+    "print('JS', json.loads(json.dumps({'k': [1, 2]}))['k'][1])\n"
+    "print('TD', time.ticks_diff(time.ticks_add(time.ticks_ms(), 3), time.ticks_ms()))\n"
+    "print('MC', micropython.const(5))\n")
+check(code == 0, "modules: script multi-modules sans erreur")
+check("ST -5" in out, "struct.pack/unpack correct")
+check("AR 6" in out, "array.array correct")
+check("NT 9" in out, "collections.namedtuple correct")
+check("DQ 1" in out, "collections.deque correct")
+check("RI 1" in out, "random.randint dans l'intervalle")
+check("CH 1" in out, "random.choice correct")
+check("JS 2" in out, "json round-trip correct")
+check("TD 3" in out, "time.ticks_diff correct")
+check("MC 5" in out, "micropython.const correct")
+
 print(f"\n== {checks - fails}/{checks} vérifications OK ==")
 sys.exit(1 if fails else 0)

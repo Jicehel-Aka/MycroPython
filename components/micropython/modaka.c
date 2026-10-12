@@ -17,9 +17,20 @@
 #include "py/builtin.h"
 #include "py/mperrno.h"
 #include "py/stream.h"
+#include "py/mphal.h"
 
 #include "aka_hal.h"
 #include "aka_keys.h"
+
+// --- Glue temps pour le module `time` (MICROPY_PY_TIME) --------------------
+// Le module time appelle mp_hal_ticks_ms/us/cpu() et mp_hal_delay_ms/us(). Le
+// port embed ne les fournit pas : on les cable ici sur aka_hal (horloge et
+// pause reelles). Portable (pas de dependance materielle directe).
+mp_uint_t mp_hal_ticks_ms(void) { return (mp_uint_t)aka_hal_ticks_ms(); }
+mp_uint_t mp_hal_ticks_us(void) { return (mp_uint_t)aka_hal_ticks_ms() * 1000u; }
+mp_uint_t mp_hal_ticks_cpu(void) { return (mp_uint_t)aka_hal_ticks_ms() * 1000u; }
+void mp_hal_delay_ms(mp_uint_t ms) { aka_hal_sleep_ms((uint32_t)ms); }
+void mp_hal_delay_us(mp_uint_t us) { aka_hal_sleep_ms((uint32_t)((us + 999u) / 1000u)); }
 
 // Marge de securite de pile laissee a MicroPython (octets). Doit rester
 // inferieure a la pile de la tache app_main (cf. sdkconfig.defaults).

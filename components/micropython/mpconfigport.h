@@ -103,3 +103,20 @@
 #define MICROPY_PY_BUILTINS_SET                  (1)
 #define MICROPY_PY_BUILTINS_ROUND_INT            (1)
 #define MICROPY_PY_BUILTINS_RANGE_ATTRS          (1)
+
+// --- Modules standard supplementaires (coupes au niveau MINIMUM) -----------
+// Tous autonomes (aucune dependance VFS/materielle), sauf `time` qui s'appuie
+// sur quelques fonctions mp_hal_* fournies dans modaka.c. Regenerer le coeur
+// embed (build_micropython_embed.sh) apres tout changement ici.
+#define MICROPY_PY_RANDOM                        (1)   // module random (getrandbits, seed...)
+// Sans ce drapeau, random n'expose que getrandbits()/seed() ; on l'active pour
+// randint(), randrange(), random(), uniform(), choice() (indispensables au jeu).
+#define MICROPY_PY_RANDOM_EXTRA_FUNCS            (1)
+#define MICROPY_PY_STRUCT                        (1)   // struct.pack/unpack (sauvegardes binaires)
+#define MICROPY_PY_JSON                          (1)   // json.dumps/loads (config/sauvegardes texte)
+#define MICROPY_PY_ARRAY                         (1)   // array.array (tableaux types)
+#define MICROPY_PY_COLLECTIONS                   (1)   // namedtuple
+#define MICROPY_PY_COLLECTIONS_DEQUE             (1)   // deque
+#define MICROPY_PY_COLLECTIONS_ORDEREDDICT       (1)   // OrderedDict
+#define MICROPY_PY_MICROPYTHON                   (1)   // micropython.const(), mem_info()...
+#define MICROPY_PY_TIME                          (1)   // time.sleep/sleep_ms/ticks_ms/ticks_diff...

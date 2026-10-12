@@ -293,17 +293,30 @@ cutting each other off:
 
 ### Gotchas already hit — avoid them from the start
 
-This MicroPython build is **minimal** — plenty of things present on a PC
-aren't here. Everything below was discovered while writing the 7 games in
-this folder, usually via an unexpected `TypeError`/`NameError` on the
-serial console:
+This MicroPython build stays **small** (`embed` port), but the standard
+modules most useful for games are enabled in `mpconfigport.h`:
 
-- **No `math` module**: no `sqrt()`, etc. Write your own pure-Python
-  version if needed (see `sqrt()` in `game8266.py`, Newton's method, a few
-  lines is enough).
-- **`const()`** (common in ESP8266/ESP32 MicroPython code) isn't
-  guaranteed to be available — add `def const(x): return x` at the top of
-  your file just in case; harmless if it already exists.
+> **Available modules**: `math` (sin, cos, tan, exp, log, log10, sqrt, pow,
+> pi, e…), `random` (randint, randrange, random, uniform, choice, seed),
+> `json` (dumps/loads), `struct` (pack/unpack), `array`, `collections`
+> (namedtuple, deque, OrderedDict), `micropython` (`const`, `mem_info`),
+> `time` (ticks_ms/us, ticks_diff/add, sleep/sleep_ms/sleep_us), plus `sys`,
+> `gc`, `io`. See the **scientific calculator** (`calculatrice.py`) for a
+> full example using `math`.
+>
+> Still absent (not useful here, left off): `os` (no VFS — use
+> `aka.list_py()`, `aka.file_read/write()` and `open()`), `re`, `cmath`,
+> `hashlib`, `framebuf`…
+
+Everything below was discovered while writing the games in this folder,
+often via an unexpected `TypeError`/`NameError` on the serial console:
+
+- **`math` is now available** (`import math`): `sqrt`, `sin`, `cos`,
+  `log10`… No need to roll your own anymore. (Older games keep their
+  hand-written `sqrt()` in `game8266.py`, which is harmless.)
+- **`const()`** is available via `from micropython import const` (or
+  `import micropython; micropython.const(x)`). No need to define
+  `def const(x): return x` anymore, though it stays harmless.
 - **`sorted(..., key=...)`** and **`all(... for ... in ...)`** (with a
   generator expression): avoid them, use a manual loop or a simple sort
   instead (see `main.py` or `puissance4.py` for working examples).
@@ -529,11 +542,11 @@ if a game wants to offer its own script submenu.
 - **`TypeError: function takes 0 positional arguments but 1 were given`**:
   most likely `aka.pressed(aka.UP)` instead of `aka.pressed() & aka.UP` —
   see §8.
-- **`NameError: name 'X' isn't defined`** when importing a standard module
-  (`math`, `random`...) or using `const()`: this MicroPython build is
-  minimal, several "standard" features aren't included. Check first
-  whether `game8266.py` already provides a pure-Python alternative (e.g.
-  `sqrt`), otherwise write your own — see §8.
+- **`NameError`/`ImportError` on a standard module**: the usual ones are
+  now enabled (`math`, `random`, `json`, `struct`, `array`, `collections`,
+  `micropython`, `time` — see the list above). If a module really is
+  missing (e.g. `os`, `re`), check whether `game8266.py`/`umachine.py`
+  already provide a pure-Python alternative, otherwise write your own.
 - **Graphic trails/leftovers never disappear**: make sure you clear the
   **entire** screen at the start of each frame (not just a partial area) —
   anything drawn even slightly outside the cleared zone stays there

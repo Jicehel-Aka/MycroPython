@@ -43,7 +43,8 @@ endif()
 file(GLOB_RECURSE EMBED_SRC
   ${EMBED}/py/*.c
   ${EMBED}/shared/*.c
-  ${EMBED}/port/*.c)
+  ${EMBED}/port/*.c
+  ${EMBED}/extmod/*.c)   # modules extmod ajoutes au paquet (random, json, time)
 
 add_library(mpembed STATIC ${EMBED_SRC} ${MP}/modaka.c)
 target_include_directories(mpembed PUBLIC ${EMBED} ${EMBED}/port ${MP} ${SIM})

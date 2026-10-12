@@ -7,6 +7,8 @@
 file(GLOB MP_PY_SRCS     ${CMAKE_CURRENT_LIST_DIR}/micropython_embed/py/*.c)
 file(GLOB MP_SHARED_SRCS ${CMAKE_CURRENT_LIST_DIR}/micropython_embed/shared/runtime/*.c)
 file(GLOB MP_PORT_SRCS   ${CMAKE_CURRENT_LIST_DIR}/micropython_embed/port/*.c)
+# Modules extmod ajoutes au paquet par build_micropython_embed.sh (random, json, time).
+file(GLOB MP_EXTMOD_SRCS ${CMAKE_CURRENT_LIST_DIR}/micropython_embed/extmod/*.c)
 
 if(NOT MP_PY_SRCS)
     message(FATAL_ERROR
@@ -15,7 +17,7 @@ if(NOT MP_PY_SRCS)
 endif()
 
 idf_component_register(
-    SRCS ${MP_PY_SRCS} ${MP_SHARED_SRCS} ${MP_PORT_SRCS} "modaka.c" "aka_hal.cpp" "transfer.cpp"
+    SRCS ${MP_PY_SRCS} ${MP_SHARED_SRCS} ${MP_PORT_SRCS} ${MP_EXTMOD_SRCS} "modaka.c" "aka_hal.cpp" "transfer.cpp"
     INCLUDE_DIRS "." "micropython_embed"
     REQUIRES gamebuino aka_runtime)
 
