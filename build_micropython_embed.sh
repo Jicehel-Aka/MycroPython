@@ -34,9 +34,31 @@ echo "   MicroPython : $MICROPYTHON_TOP"
 echo "   Sortie      : $COMP_DIR/micropython_embed"
 
 cd "$COMP_DIR"
+
+# Modules extmod a embarquer (random, json, time) : le port embed ne les copie
+# ni ne les scanne. On les place dans extmod_extra/ (chemin RELATIF, declare
+# dans embed.mk via SRC_QSTR) AVANT la generation pour que leurs chaines QSTR et
+# leur MP_REGISTER_MODULE soient collectes (le scan ignore les chemins absolus).
+EXTMOD_FILES="modrandom.c modjson.c modtime.c modtime.h"
+rm -rf extmod_extra
+mkdir -p extmod_extra
+for f in $EXTMOD_FILES; do
+    cp "$MICROPYTHON_TOP/extmod/$f" "extmod_extra/$f"
+done
+
 "$MAKE_BIN" -f embed.mk \
     MICROPYTHON_TOP="$MICROPYTHON_TOP" \
     PYTHON="$PYTHON_BIN" \
     "$@"
+
+# Le paquet genere ne contient aucun .c de extmod : on y depose ceux qu'on vient
+# de faire scanner, pour qu'ils soient reellement compiles (sim PC et ESP).
+echo ">> Ajout des modules extmod (random, json, time) au paquet"
+EXTMOD_DST="$COMP_DIR/micropython_embed/extmod"
+mkdir -p "$EXTMOD_DST"
+for f in $EXTMOD_FILES; do
+    cp "extmod_extra/$f" "$EXTMOD_DST/$f"
+done
+rm -rf extmod_extra
 
 echo ">> OK. Tu peux maintenant lancer : idf.py build"

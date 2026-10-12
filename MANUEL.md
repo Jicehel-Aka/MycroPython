@@ -297,17 +297,30 @@ audibles dans l'ordre plutôt que de s'interrompre les unes les autres :
 
 ### Pièges déjà rencontrés — à éviter dès le départ
 
-Cette configuration MicroPython est **minimale** : beaucoup de choses
-présentes sur un PC ne le sont pas ici. Tout ce qui suit a été découvert en
-écrivant les 7 jeux de ce dossier, souvent après un `TypeError`/`NameError`
-inattendu sur la console série :
+Cette configuration MicroPython reste **réduite** (port `embed`), mais les
+modules standard les plus utiles au jeu sont activés dans `mpconfigport.h` :
 
-- **Pas de module `math`** : pas de `sqrt()`, etc. Écris ta propre version
-  en pur Python si besoin (voir `sqrt()` dans `game8266.py`, méthode de
-  Newton, quelques lignes suffisent).
-- **`const()`** (courant dans du code MicroPython ESP8266/ESP32) n'est pas
-  garanti disponible — ajoute `def const(x): return x` en haut de ton
-  fichier par sécurité, ça ne coûte rien si elle existe déjà.
+> **Modules disponibles** : `math` (sin, cos, tan, exp, log, log10, sqrt,
+> pow, pi, e…), `random` (randint, randrange, random, uniform, choice, seed),
+> `json` (dumps/loads), `struct` (pack/unpack), `array`, `collections`
+> (namedtuple, deque, OrderedDict), `micropython` (`const`, `mem_info`),
+> `time` (ticks_ms/us, ticks_diff/add, sleep/sleep_ms/sleep_us), ainsi que
+> `sys`, `gc`, `io`. Voir la **calculatrice scientifique**
+> (`calculatrice.py`) pour un exemple complet utilisant `math`.
+>
+> Toujours absents (peu utiles ici, non activés) : `os` (pas de VFS — utilise
+> `aka.list_py()`, `aka.file_read/write()` et `open()`), `re`, `cmath`,
+> `hashlib`, `framebuf`…
+
+Tout ce qui suit a été découvert en écrivant les jeux de ce dossier, souvent
+après un `TypeError`/`NameError` inattendu sur la console série :
+
+- **`math` est désormais disponible** (`import math`) : `sqrt`, `sin`, `cos`,
+  `log10`… Plus besoin d'écrire sa propre version. (Les anciens jeux gardent
+  leur `sqrt()` maison dans `game8266.py`, inoffensif.)
+- **`const()`** est disponible via `from micropython import const` (ou
+  `import micropython; micropython.const(x)`). Inutile désormais de définir
+  `def const(x): return x`, même si ça reste sans danger.
 - **`sorted(..., key=...)`** et **`all(... for ... in ...)`** (avec une
   expression génératrice) : évite-les, remplace par une boucle ou un tri
   manuel simple (voir `main.py` ou `puissance4.py` pour des exemples déjà
