@@ -233,7 +233,12 @@ static void aka_exec_named(const char *name, const char *src, size_t len) {
         mp_call_function_0(module_fun);
         nlr_pop();
     } else {
-        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+        // SystemExit = sortie propre (retour au menu demande par Echap dans
+        // aka-py-play, ou sys.exit()) : on ne l'affiche pas comme une erreur.
+        mp_obj_t exc = (mp_obj_t)nlr.ret_val;
+        if (!mp_obj_exception_match(exc, MP_OBJ_FROM_PTR(&mp_type_SystemExit))) {
+            mp_obj_print_exception(&mp_plat_print, exc);
+        }
     }
 }
 
@@ -449,7 +454,17 @@ static MP_DEFINE_CONST_FUN_OBJ_0(aka_width_obj, aka_width);
 static mp_obj_t aka_height(void) { return mp_obj_new_int(aka_hal_height()); }
 static MP_DEFINE_CONST_FUN_OBJ_0(aka_height_obj, aka_height);
 
-static mp_obj_t aka_update(void)   { return mp_obj_new_bool(aka_hal_update()); }
+static mp_obj_t aka_update(void)   {
+    int r = aka_hal_update();
+    // Simulateur fenetre (aka-py-play) : si l'utilisateur a demande le retour
+    // au menu (Echap), on deroule le script en cours via SystemExit -- rattrape
+    // silencieusement par aka_exec_named, qui rend la main au menu. Mecanisme
+    // INDEPENDANT du code du jeu (pas besoin d'un "Quitter" dans chaque jeu).
+    if (aka_hal_menu_requested()) {
+        mp_raise_type(&mp_type_SystemExit);
+    }
+    return mp_obj_new_bool(r);
+}
 static MP_DEFINE_CONST_FUN_OBJ_0(aka_update_obj, aka_update);
 static mp_obj_t aka_buttons(void)  { return mp_obj_new_int_from_uint(aka_hal_buttons()); }
 static MP_DEFINE_CONST_FUN_OBJ_0(aka_buttons_obj, aka_buttons);

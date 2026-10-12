@@ -102,6 +102,9 @@ uint32_t aka_hal_buttons(void)  { return g_keys.raw; }
 uint32_t aka_hal_pressed(void)  { return g_keys.pressed; }
 uint32_t aka_hal_released(void) { return g_keys.released; }
 void aka_hal_joystick(int *x, int *y) { if (x) *x = g_keys.joxx; if (y) *y = g_keys.joxy; }
+// Retour-menu "a la akalove-play" : specifique au simulateur PC fenetre
+// (aka-py-play). Sur la console, pas de menu de ce type -> toujours 0.
+int aka_hal_menu_requested(void) { return 0; }
 
 // --- Temps / divers ---
 uint32_t aka_hal_ticks_ms(void) { return (uint32_t)(esp_timer_get_time() / 1000); }

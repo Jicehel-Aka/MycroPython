@@ -21,7 +21,10 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BIN = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "build-sim", "aka-py-sim-headless")
+# Binaire sans fenêtre (renommé aka-py-sim ; aligné sur akalove-sim).
+BIN = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "build-sim", "aka-py-sim")
+# Binaire de test du menu (main_play.c + HAL sans fenêtre, entrées scriptées).
+PLAYBIN = os.path.join(ROOT, "build-sim", "aka-py-play-test")
 PYDIR = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, "sdcard_files", "py")
 OUT = os.environ.get("AKA_TEST_OUT", "/tmp/aka_py_tests")
 os.makedirs(OUT, exist_ok=True)
@@ -201,6 +204,40 @@ if os.path.exists(os.path.join(PYDIR, "feu_artifice.py")):
             d = _json.load(f)
         check("launches" in d and "best" in d and "runtime_s" in d,
               "feu_artifice: json contient launches/best/runtime_s")
+
+# --- Vérif ciblée : menu de sélection (aka-py-play) + retour-menu -----------
+if os.path.exists(PLAYBIN):
+    print("[menu — sélection de programme + retour (SystemExit)]")
+    # 1) Écran du menu (aucune touche) : titre jaune + entrées.
+    menu_ppm = os.path.join(OUT, "menu.ppm")
+    if os.path.exists(menu_ppm):
+        os.remove(menu_ppm)
+    env = dict(os.environ, AKA_FRAMES="8", AKA_SHOT=menu_ppm, AKA_SHOT_FRAME="3")
+    r = subprocess.run([PLAYBIN], env=env, cwd=PYDIR,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=30)
+    check(r.returncode == 0, "menu: le binaire démarre et s'arrête proprement")
+    pix = None
+    if os.path.exists(menu_ppm):
+        with open(menu_ppm, "rb") as f:
+            assert f.readline().strip() == b"P6"
+            w, h = map(int, f.readline().split())
+            f.readline()
+            d = f.read()
+        if w == W and h == H:
+            pix = [(d[i], d[i + 1], d[i + 2]) for i in range(0, W * H * 3, 3)]
+    if check(pix is not None, "menu: PPM produit"):
+        yellow = sum(1 for (r_, g_, b_) in pix if r_ > 200 and g_ > 170 and b_ < 90)
+        check(yellow > 50, f"menu: titre/sélection en jaune présents ({yellow} px)")
+
+    # 2) Flux complet : A sélectionne le 1er programme, puis retour-menu simulé
+    #    (AKA_MENU_AT) -> pas de crash, pas de SystemExit affiché.
+    env = dict(os.environ, AKA_FRAMES="40", AKA_PRESS="a:3:5", AKA_MENU_AT="14")
+    r = subprocess.run([PLAYBIN], env=env, cwd=PYDIR,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=40)
+    out = (r.stdout + r.stderr).decode("utf-8", "replace")
+    check(r.returncode == 0, "menu: sélection + lancement + retour-menu sans crash")
+    check("Traceback" not in out and "SystemExit" not in out,
+          "menu: retour-menu propre (pas d'exception affichée)")
 
 print(f"\n== {checks - fails}/{checks} vérifications OK ==")
 sys.exit(1 if fails else 0)

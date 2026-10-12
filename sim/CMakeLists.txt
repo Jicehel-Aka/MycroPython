@@ -50,22 +50,34 @@ add_library(mpembed STATIC ${EMBED_SRC} ${MP}/modaka.c)
 target_include_directories(mpembed PUBLIC ${EMBED} ${EMBED}/port ${MP} ${SIM})
 target_compile_options(mpembed PRIVATE -w)   # code généré + glue : avertissements hors de notre contrôle
 
-# --- Sources communes du simulateur -----------------------------------------
-set(SIM_COMMON ${SIM}/aka_gfx.c ${SIM}/main_sim.c)
+# --- Moteur de rendu commun --------------------------------------------------
+# (le main diffère : main_sim.c pour le headless, main_play.c pour le fenêtré)
+set(SIM_GFX ${SIM}/aka_gfx.c)
 
 # =============================================================================
-#  Cible 1 : aka-py-sim-headless (toujours bâtie)
+#  Cible 1 : aka-py-sim — SANS fenêtre (PPM + entrées scriptées), toujours bâtie.
+#  Nommage aligné sur AKA-Love : aka-py-sim <-> akalove-sim (headless).
 # =============================================================================
-add_executable(aka-py-sim-headless ${SIM_COMMON} ${SIM}/aka_hal_headless.c)
-target_include_directories(aka-py-sim-headless PRIVATE ${EMBED} ${EMBED}/port ${MP} ${SIM})
-target_compile_options(aka-py-sim-headless PRIVATE -Wall -Wextra)
-target_link_libraries(aka-py-sim-headless PRIVATE mpembed m)
+add_executable(aka-py-sim ${SIM_GFX} ${SIM}/main_sim.c ${SIM}/aka_hal_headless.c)
+target_include_directories(aka-py-sim PRIVATE ${EMBED} ${EMBED}/port ${MP} ${SIM})
+target_compile_options(aka-py-sim PRIVATE -Wall -Wextra)
+target_link_libraries(aka-py-sim PRIVATE mpembed m)
 if(MINGW)
-  target_link_options(aka-py-sim-headless PRIVATE -static)
+  target_link_options(aka-py-sim PRIVATE -static)
 endif()
 
+# Cible de TEST uniquement (non livrée) : le main AVEC MENU (main_play.c) mais
+# relié au HAL sans fenêtre (entrées scriptées) -- permet de tester en CI le
+# menu de sélection et le retour-menu (SystemExit) sans écran ni SDL.
+add_executable(aka-py-play-test ${SIM_GFX} ${SIM}/main_play.c ${SIM}/aka_hal_headless.c)
+target_include_directories(aka-py-play-test PRIVATE ${EMBED} ${EMBED}/port ${MP} ${SIM})
+target_compile_options(aka-py-play-test PRIVATE -Wall -Wextra)
+target_link_libraries(aka-py-play-test PRIVATE mpembed m)
+
 # =============================================================================
-#  Cible 2 : aka-py-sim (FENÊTRÉ + son, SDL2) — ignorée si SDL2 absent
+#  Cible 2 : aka-py-play — FENÊTRÉ + son (SDL2) + MENU de sélection de programme.
+#  Nommage aligné sur AKA-Love : aka-py-play <-> akalove-play (fenêtré).
+#  Ignorée si SDL2 absent.
 # =============================================================================
 find_package(SDL2 QUIET)
 if(NOT SDL2_FOUND)   # repli pkg-config (SDL2 sans fichier *Config.cmake)
@@ -76,27 +88,27 @@ if(NOT SDL2_FOUND)   # repli pkg-config (SDL2 sans fichier *Config.cmake)
 endif()
 
 if(SDL2_FOUND OR SDL2PC_FOUND)
-  add_executable(aka-py-sim ${SIM_COMMON} ${SIM}/aka_hal_sdl.c)
-  target_include_directories(aka-py-sim PRIVATE ${EMBED} ${EMBED}/port ${MP} ${SIM})
-  target_compile_options(aka-py-sim PRIVATE -Wall -Wextra)   # pas de -Werror : en-têtes SDL2
-  target_link_libraries(aka-py-sim PRIVATE mpembed m)
+  add_executable(aka-py-play ${SIM_GFX} ${SIM}/main_play.c ${SIM}/aka_hal_sdl.c)
+  target_include_directories(aka-py-play PRIVATE ${EMBED} ${EMBED}/port ${MP} ${SIM})
+  target_compile_options(aka-py-play PRIVATE -Wall -Wextra)   # pas de -Werror : en-têtes SDL2
+  target_link_libraries(aka-py-play PRIVATE mpembed m)
   if(TARGET SDL2::SDL2)
     # On lie UNIQUEMENT SDL2::SDL2 (pas SDL2main) : notre main() est dans
-    # main_sim.c (SDL_MAIN_HANDLED dans aka_hal_sdl.c) -> évite « undefined
+    # main_play.c (SDL_MAIN_HANDLED dans aka_hal_sdl.c) -> évite « undefined
     # reference to SDL_main » à l'édition de liens MinGW/Windows.
-    target_link_libraries(aka-py-sim PRIVATE SDL2::SDL2)
+    target_link_libraries(aka-py-play PRIVATE SDL2::SDL2)
   elseif(SDL2_FOUND)
-    target_include_directories(aka-py-sim PRIVATE ${SDL2_INCLUDE_DIRS})
-    target_link_libraries(aka-py-sim PRIVATE ${SDL2_LIBRARIES})
+    target_include_directories(aka-py-play PRIVATE ${SDL2_INCLUDE_DIRS})
+    target_link_libraries(aka-py-play PRIVATE ${SDL2_LIBRARIES})
   else()
-    target_include_directories(aka-py-sim PRIVATE ${SDL2PC_INCLUDE_DIRS})
-    target_link_libraries(aka-py-sim PRIVATE ${SDL2PC_LIBRARIES})
-    target_link_directories(aka-py-sim PRIVATE ${SDL2PC_LIBRARY_DIRS})
+    target_include_directories(aka-py-play PRIVATE ${SDL2PC_INCLUDE_DIRS})
+    target_link_libraries(aka-py-play PRIVATE ${SDL2PC_LIBRARIES})
+    target_link_directories(aka-py-play PRIVATE ${SDL2PC_LIBRARY_DIRS})
   endif()
   if(MINGW)   # SDL2 livré en DLL à côté ; on fige seulement le runtime GCC
-    target_link_options(aka-py-sim PRIVATE -static-libgcc)
+    target_link_options(aka-py-play PRIVATE -static-libgcc)
   endif()
-  message(STATUS "aka-py-sim (SDL2, fenêtré + son) : ACTIVÉ")
+  message(STATUS "aka-py-play (SDL2, fenêtré + son + menu) : ACTIVÉ")
 else()
-  message(STATUS "aka-py-sim (SDL2, fenêtré + son) : SDL2 introuvable -> cible ignorée")
+  message(STATUS "aka-py-play (SDL2, fenêtré + son + menu) : SDL2 introuvable -> cible ignorée")
 endif()

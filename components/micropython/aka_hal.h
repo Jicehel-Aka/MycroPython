@@ -47,6 +47,13 @@ uint32_t aka_hal_pressed(void);
 uint32_t aka_hal_released(void);
 void     aka_hal_joystick(int *x, int *y);
 
+// Simulateur PC uniquement : renvoie 1 (une seule fois, puis se remet a 0) si
+// l'utilisateur a demande le RETOUR AU MENU (touche Echap du binaire fenetre
+// aka-py-play), independamment du code du jeu. La glue MicroPython (aka_update)
+// leve alors SystemExit pour derouler le script en cours et rendre la main au
+// menu. Cote console et cote headless : toujours 0 (aucun menu de ce type).
+int      aka_hal_menu_requested(void);
+
 // --- Temps / divers ---
 uint32_t aka_hal_ticks_ms(void);
 void     aka_hal_sleep_ms(uint32_t ms);
