@@ -16,8 +16,8 @@ mêmes boutons, mêmes limites.
 
 | Binaire | Rôle |
 |---|---|
-| `aka-py-sim` | **Fenêtré, avec le son réel** (SDL2). Pour jouer et tester. C'est le binaire lancé par **AKA-IDE** quand on exécute un projet MicroPython. |
-| `aka-py-sim-headless` | **Sans fenêtre** (sortie image PPM, entrées scriptées par variables d'environnement). Pour les tests automatisés et la CI. |
+| `aka-py-play` | **Fenêtré, son réel + MENU de sélection de programme** (SDL2). Pour jouer et tester ; permet de choisir et CHANGER de `.py` (Échap revient au menu). C'est le binaire lancé par **AKA-IDE**. Nommage aligné sur `akalove-play`. |
+| `aka-py-sim` | **Sans fenêtre** (sortie image PPM, entrées scriptées par variables d'environnement). Pour les tests automatisés et la CI. Aligné sur `akalove-sim`. |
 
 ## Architecture
 
@@ -34,8 +34,9 @@ sim/
  ├─ aka_hal_sdl.c        couche FENÊTRÉE : fenêtre + clavier + son réel (SDL2)
  ├─ aka_hal_headless.c   couche SANS fenêtre : horloge virtuelle, entrées
  │                       scriptées, capture PPM, arrêt borné
- ├─ main_sim.c           main() commun : alloue le tas, aka_boot_init/exec
- └─ CMakeLists.txt       deux cibles (aka-py-sim + aka-py-sim-headless)
+ ├─ main_sim.c           main() du binaire sans fenêtre (exécute un script)
+ ├─ main_play.c          main() du binaire fenêtré : MENU + lancement + retour-menu
+ └─ CMakeLists.txt       cibles aka-py-sim (headless) + aka-py-play (fenêtré)
 
 components/micropython/
  ├─ modaka.c             module `aka` + amorçage — PORTABLE, réutilisé tel quel
@@ -63,25 +64,30 @@ cmake -S sim -B build-sim -DCMAKE_BUILD_TYPE=Release
 cmake --build build-sim -j
 ```
 
-On obtient `build-sim/aka-py-sim` (si SDL2 est présent) et
-`build-sim/aka-py-sim-headless`. Si SDL2 est introuvable, seule la cible
+On obtient `build-sim/aka-py-play` (fenêtré, si SDL2 est présent) et
+`build-sim/aka-py-sim` (sans fenêtre). Si SDL2 est introuvable, seule la cible
 sans fenêtre est bâtie (la cible fenêtrée est simplement ignorée).
 
 ## Jouer
 
 ```bash
-./build-sim/aka-py-sim  sdcard_files/py/pong.py
+./build-sim/aka-py-play                         # menu des .py du dossier courant
+./build-sim/aka-py-play  sdcard_files/py/pong.py   # lance pong, puis menu
 ```
+
+Lancé sans argument, `aka-py-play` affiche un **menu** listant les programmes
+`.py` (choix Haut/Bas, A pour lancer). Pendant un jeu, **Échap revient au
+menu** (indépendamment du code du jeu), et fermer la fenêtre quitte.
 
 Le script et les modules qu'il importe (`game8266`, `upygame`, …) doivent être
 dans le même dossier, exactement comme sur la carte SD (`/py`).
 
 Clavier : **flèches** = D-Pad · **Espace/Entrée** = A · **X** = B · **C** = C ·
 **V** = D · **Maj gauche/droite** = L1/R1 · **Tab** = MENU · **I J K L** =
-manette analogique · **Échap** = quitter. (On évite la touche « M » pour le
-menu : SDL lit la position physique et le « M » QWERTY tombe sur « , » en
-AZERTY ; Tab est au même endroit partout.) Voir aussi [`sim/LISEZMOI.txt`](../sim/LISEZMOI.txt),
-livré dans les zips PC.
+manette analogique · **Échap** = retour au menu · **fermer la fenêtre** =
+quitter. (On évite la touche « M » pour le menu AKA : SDL lit la position
+physique et le « M » QWERTY tombe sur « , » en AZERTY ; Tab est au même endroit
+partout.) Voir aussi [`sim/LISEZMOI.txt`](../sim/LISEZMOI.txt), livré dans les zips PC.
 
 ## Tests
 
@@ -100,6 +106,6 @@ release.
 
 ## Intégration AKA-IDE
 
-AKA-IDE lance `aka-py-sim` pour exécuter un projet MicroPython (symétrique de
+AKA-IDE lance `aka-py-play` pour exécuter un projet MicroPython (symétrique de
 `akalove-play` pour un projet Love2D). Le binaire attend un seul argument : le
 chemin du script `.py` à exécuter.

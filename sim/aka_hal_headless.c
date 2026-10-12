@@ -17,6 +17,7 @@
 #include <strings.h>
 
 static int      g_frame = 0;
+static int      g_menu_at = -1;      // AKA_MENU_AT : frame où simuler un retour-menu (Échap), -1 = jamais
 static int      g_max = -2;          // -2 = non initialisé
 static int      g_shot_frame = -1;
 static const char *g_shot = NULL;
@@ -49,6 +50,8 @@ static void init_opts(void) {
     g_shot = getenv("AKA_SHOT");
     const char *sf = getenv("AKA_SHOT_FRAME");
     g_shot_frame = sf ? atoi(sf) : (g_max > 0 ? g_max - 1 : -1);
+    const char *ma = getenv("AKA_MENU_AT");
+    g_menu_at = ma ? atoi(ma) : -1;
     const char *p = getenv("AKA_PRESS");
     if (p && *p) {
         char buf[512]; strncpy(buf, p, sizeof buf - 1); buf[sizeof buf - 1] = 0;
@@ -106,6 +109,10 @@ uint32_t aka_hal_buttons(void) { if (g_max == -2) init_opts(); return mask_at(g_
 uint32_t aka_hal_pressed(void) { return mask_at(g_frame) & ~g_prev; }
 uint32_t aka_hal_released(void) { return g_prev & ~mask_at(g_frame); }
 void aka_hal_joystick(int *x, int *y) { if (x) *x = 0; if (y) *y = 0; }
+int  aka_hal_menu_requested(void) {
+    if (g_max == -2) init_opts();
+    return (g_menu_at >= 0 && g_frame >= g_menu_at) ? 1 : 0;
+}
 
 uint32_t aka_hal_ticks_ms(void) { return (uint32_t)g_frame * 33u; }   // horloge virtuelle 30 fps
 void aka_hal_sleep_ms(uint32_t ms) { (void)ms; }

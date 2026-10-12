@@ -52,6 +52,9 @@ static int            g_jx = 1562, g_jy = 1562;  /* centre ~JOYX_MID (plage 0..3
 /* ---- Vibration (suivi local, comme le HAL ESP) --------------------------- */
 static uint32_t       g_vibrate_end = 0;
 
+/* ---- Retour au menu (Échap) : drapeau one-shot lu par aka_hal_menu_requested */
+static int            g_menu_req = 0;
+
 /* ---- Audio : une seule piste d'effet (PCM 8 bits non signé -> S16 mono) --- */
 static SDL_AudioDeviceID g_audio = 0;
 static int16_t       *g_snd = NULL;
@@ -150,8 +153,8 @@ int aka_hal_update(void) {
     sim_init();
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_QUIT) { exit(0); }                                  /* fermer la fenêtre */
-        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) exit(0); /* Échap = quitter */
+        if (e.type == SDL_QUIT) { exit(0); }                                      /* fermer la fenêtre = quitter l'appli */
+        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) g_menu_req = 1; /* Échap = retour au menu */
     }
     g_prev = g_buttons;
     read_keys();
@@ -175,6 +178,7 @@ uint32_t aka_hal_buttons(void) { return g_buttons; }
 uint32_t aka_hal_pressed(void) { return g_buttons & ~g_prev; }
 uint32_t aka_hal_released(void) { return g_prev & ~g_buttons; }
 void aka_hal_joystick(int *x, int *y) { if (x) *x = g_jx; if (y) *y = g_jy; }
+int  aka_hal_menu_requested(void) { int r = g_menu_req; g_menu_req = 0; return r; }
 
 /* ---- Temps / divers ------------------------------------------------------ */
 uint32_t aka_hal_ticks_ms(void) { return g_vclock_ms; }
