@@ -81,6 +81,19 @@
 // Confort pour le dev de jeux (fonctionnalites purement VM, aucune dependance
 // materielle -> pas de HAL supplementaire a fournir).
 #define MICROPY_FLOAT_IMPL                       (MICROPY_FLOAT_IMPL_FLOAT)
+// Module `math` (sin, cos, tan, exp, log, sqrt, pow, pi, e...). Desactive par
+// defaut au niveau de config MINIMUM ; on l'active ici car indispensable pour
+// une calculatrice scientifique et tres pratique pour les jeux (trajectoires,
+// rotations). Les fonctions s'appuient sur la libm du systeme (deja liee : -lm
+// cote simulateur PC, libm fournie par la toolchain xtensa cote ESP32-S3) ;
+// avec MICROPY_FLOAT_IMPL_FLOAT, ce sont les variantes simples (sinf, cosf...).
+// IMPORTANT : regenerer le coeur embed (build_micropython_embed.sh) apres ce
+// changement pour que le module et ses QSTR soient pris en compte.
+#define MICROPY_PY_MATH                          (1)
+// Fonctions "speciales" du module math : log2, log10, expm1, sinh/cosh/tanh,
+// asinh/acosh/atanh, erf, gamma... (coupees au niveau MINIMUM). On les active
+// pour disposer d'un math complet (log10 notamment, utile a une calculatrice).
+#define MICROPY_PY_MATH_SPECIAL_FUNCTIONS        (1)
 #define MICROPY_ERROR_REPORTING                  (MICROPY_ERROR_REPORTING_NORMAL)
 #define MICROPY_ENABLE_SOURCE_LINE               (1)
 #define MICROPY_PY_BUILTINS_SLICE                (1)

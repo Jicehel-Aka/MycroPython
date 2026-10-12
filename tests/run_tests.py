@@ -69,9 +69,21 @@ def distinct(pix):
     return len(set(pix))
 
 
+def run_source(src, frames=2):
+    """Exécute un script Python arbitraire (texte) et renvoie (code, stdout)."""
+    import tempfile
+    f = tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, dir=OUT)
+    f.write(src)
+    f.close()
+    env = dict(os.environ, AKA_FRAMES=str(frames))
+    r = subprocess.run([BIN, f.name], env=env, cwd=PYDIR,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+    return r.returncode, r.stdout.decode("utf-8", "replace")
+
+
 # --- Jeux qui importent game8266/upygame (ex-crash à l'import) ---------------
 GAMES = ["demo", "pong", "snake", "invader", "breakout", "puissance4",
-         "tetris", "bataille_navale"]
+         "tetris", "bataille_navale", "calculatrice"]
 
 print("== Simulateur MicroPython-AKA : tests ==")
 print(f"   binaire : {BIN}")
@@ -105,6 +117,30 @@ if pix:
     # Fond majoritairement noir
     black = sum(1 for p in pix if p == (0, 0, 0))
     check(black > W * H * 0.5, "pong menu: fond majoritairement noir")
+
+# --- Vérif ciblée : calculatrice + tracé de courbe --------------------------
+if os.path.exists(os.path.join(PYDIR, "calculatrice.py")):
+    print("[calculatrice — mode courbe]")
+    # D (frame 2) bascule en mode courbe ; sans expression, trace sin(x).
+    code, pix = run_game("calculatrice", frames=6, press="d:2:3")
+    check(code == 0, "calculatrice: pas de crash en mode courbe")
+    if pix:
+        yellow = sum(1 for (r, g, b) in pix if r > 200 and g > 170 and b < 90)
+        check(yellow > 50, f"calculatrice: courbe jaune tracée ({yellow} px)")
+
+# --- Vérif ciblée : module math natif (MICROPY_PY_MATH) ---------------------
+print("[math — module natif]")
+code, out = run_source(
+    "import math\n"
+    "print('S', round(math.sin(math.pi/6), 3))\n"
+    "print('L', round(math.log10(1000.0), 3))\n"
+    "print('Q', round(math.sqrt(2.0), 4))\n"
+    "print('E', round(math.exp(1.0), 4))\n")
+check(code == 0, "math: script importe et s'exécute sans erreur")
+check("S 0.5" in out, "math: math.sin correct")
+check("L 3.0" in out, "math: math.log10 correct (fonctions spéciales activées)")
+check("Q 1.4142" in out, "math: math.sqrt correct")
+check("E 2.7182" in out or "E 2.7183" in out, "math: math.exp correct")
 
 print(f"\n== {checks - fails}/{checks} vérifications OK ==")
 sys.exit(1 if fails else 0)
