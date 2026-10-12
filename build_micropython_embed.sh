@@ -16,8 +16,11 @@ PYTHON_BIN="${PYTHON_BIN:-python}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMP_DIR="$SCRIPT_DIR/components/micropython"
 
-# gcc/cpp mingw pour le preprocesseur QSTR.
-export PATH="/mingw64/bin:$PATH"
+# gcc/cpp pour le preprocesseur QSTR. Sous MSYS2/Windows, on force le gcc
+# mingw ; sous Linux/CI (pas de /mingw64), on garde le gcc du systeme.
+if [ -d /mingw64/bin ]; then
+    export PATH="/mingw64/bin:$PATH"
+fi
 
 if [ ! -d "$MICROPYTHON_TOP/ports/embed" ]; then
     echo "ERREUR : MicroPython introuvable a '$MICROPYTHON_TOP'." >&2

@@ -69,12 +69,26 @@ mp_import_stat_t mp_import_stat(const char *path) {
 mp_lexer_t *mp_lexer_new_from_file(qstr filename) {
     const char *path = qstr_str(filename);
     size_t len = 0;
-    char *src = aka_read_file(path, &len);
-    if (!src) {
+    char *raw = aka_read_file(path, &len);   // alloue via malloc() (libc)
+    if (!raw) {
         mp_raise_OSError(MP_ENOENT);
     }
-    // free_len = len : le lexer devient proprietaire du buffer et le
-    // liberera lui-meme (aka_read_file alloue via malloc, compatible).
+    // BUG TROUVE ET CORRIGE (corruption du tas / "gc_free: VERIFY_PTR" lors
+    // du moindre `import module` d'un .py) : quand free_len > 0, le lexer
+    // devient proprietaire du buffer et le liberera via mp_reader_mem_close()
+    // -> m_del() -> gc_free(). Or aka_read_file() alloue avec malloc() : rendre
+    // un pointeur malloc() au ramasse-miettes corrompt le tas. (Le script
+    // principal passe par aka_exec_named(..., free_len = 0) et libere lui-meme
+    // via free(), d'ou l'absence de crash tant qu'aucun import n'avait lieu.)
+    // On recopie donc dans le tas GC pour que l'allocation et la liberation
+    // soient coherentes (gc_alloc <-> gc_free).
+    char *src = m_new_maybe(char, len);
+    if (!src) {
+        free(raw);
+        mp_raise_OSError(MP_ENOMEM);
+    }
+    memcpy(src, raw, len);
+    free(raw);
     return mp_lexer_new_from_str_len(filename, src, len, len);
 }
 

@@ -10,6 +10,9 @@ sdkconfig.orig_reference
 /components/micropython/micropython_embed/
 /components/micropython/build-embed/
 
+# Build du simulateur PC (sim/)
+/build-sim/
+
 # Editeur / OS
 *.swp
 *~

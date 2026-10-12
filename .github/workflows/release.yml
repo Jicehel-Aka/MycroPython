@@ -93,9 +93,93 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # ---------------------------------------------------------------- Simulateur PC (Windows + Linux)
+  # Même esprit que le job "pc" d'AKA-Love : on bâtit le simulateur PC de l'interpréteur MicroPython
+  # (sim/ -> aka-py-sim fenêtré SDL2 + aka-py-sim-headless) et on le publie en zip par OS, avec les
+  # jeux d'exemple et la doc. DIFFÉRENCE avec AKA-Love : il faut d'abord générer le cœur MicroPython
+  # "embed" (comme le job ESP ci-dessus), car sim/ le compile. aka-py-sim est le binaire lancé par
+  # AKA-IDE pour exécuter un projet MicroPython.
+  pc:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-x64
+          - os: windows-latest
+            name: windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Linux : génère le cœur embed, compile, lance la suite de tests, empaquette ---
+      - name: Build and test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev
+          git clone --depth 1 https://github.com/micropython/micropython.git /tmp/micropython
+          chmod +x build_micropython_embed.sh
+          MICROPYTHON_TOP=/tmp/micropython MAKE_BIN=make PYTHON_BIN=python3 ./build_micropython_embed.sh
+          cmake -S sim -B build-sim -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-sim -j"$(nproc)"
+          test -f build-sim/aka-py-sim           # le sim fenêtré (SDL2) DOIT être bâti
+          test -f build-sim/aka-py-sim-headless
+          python3 tests/run_tests.py
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p package/py
+          cp build-sim/aka-py-sim build-sim/aka-py-sim-headless sim/LISEZMOI.txt README.md package/
+          cp -r sdcard_files/py/. package/py/
+          rm -rf package/py/__pycache__
+          (cd package && zip -r ../micropython-aka-sim-${{ matrix.name }}.zip .)
+
+      # --- Windows : MinGW-w64 via MSYS2 (même GCC que Linux). SDL2 livré en DLL à côté. ---
+      - name: Set up MSYS2 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-SDL2 mingw-w64-x86_64-python make git zip
+
+      - name: Build and smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          git clone --depth 1 https://github.com/micropython/micropython.git /tmp/micropython
+          chmod +x build_micropython_embed.sh
+          MICROPYTHON_TOP=/tmp/micropython MAKE_BIN=make PYTHON_BIN=python3 ./build_micropython_embed.sh
+          cmake -S sim -B build-sim -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-sim
+          test -f build-sim/aka-py-sim.exe           # le sim fenêtré (SDL2) DOIT être bâti
+          test -f build-sim/aka-py-sim-headless.exe
+          # Fumée : seul le sim SANS fenêtre est testable sur un runner sans écran.
+          AKA_FRAMES=20 AKA_SHOT=smoke.ppm ./build-sim/aka-py-sim-headless.exe sdcard_files/py/demo.py
+          test -f smoke.ppm
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          mkdir -p package/py
+          cp build-sim/aka-py-sim.exe build-sim/aka-py-sim-headless.exe sim/LISEZMOI.txt README.md package/
+          cp /mingw64/bin/SDL2.dll package/     # SDL2 livré en DLL à côté du binaire fenêtré
+          cp -r sdcard_files/py/. package/py/
+          rm -rf package/py/__pycache__
+          (cd package && zip -r ../micropython-aka-sim-${{ matrix.name }}.zip .)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pc-${{ matrix.name }}
+          path: micropython-aka-sim-${{ matrix.name }}.zip
+          if-no-files-found: error
+          retention-days: 7
+
   release:
     if: github.event_name != 'pull_request'
-    needs: [aka]
+    needs: [aka, pc]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,6 +190,11 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+
+      # Suite de tests du simulateur + sources sim/ (pour recompiler ou auditer le simulateur PC),
+      # dans un zip à part publié avec les autres (la boucle de renommage ci-dessous l'attrape aussi).
+      - name: Package tests + sources sim (source)
+        run: zip -r artifacts/micropython-aka-tests.zip tests sim
 
       - name: Next minor version
         id: version

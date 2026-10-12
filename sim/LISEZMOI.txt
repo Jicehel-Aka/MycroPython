@@ -1,0 +1,67 @@
+===========================================================================
+ Simulateur PC de MicroPython-AKA
+===========================================================================
+
+Ce dossier contient de quoi exécuter sur PC (Windows ou Linux) les programmes
+MicroPython prévus pour la console AKA, SANS matériel. Même interpréteur que la
+console (MicroPython + le module natif « aka »), même écran 320x240, mêmes
+limites : ce qui tourne ici tourne sur l'AKA, et inversement.
+
+Deux exécutables :
+
+  * aka-py-sim        : version FENÊTRÉE avec le SON réel. C'est celle qu'on
+                        utilise pour JOUER et pour tester un programme. C'est
+                        aussi celle que lance l'éditeur AKA-IDE quand on clique
+                        sur « Exécuter » pour un projet MicroPython.
+
+  * aka-py-sim-headless : version SANS fenêtre (sortie image PPM, entrées
+                        scriptées). Sert aux tests automatisés.
+
+---------------------------------------------------------------------------
+ Lancer un programme
+---------------------------------------------------------------------------
+
+  Windows :  aka-py-sim.exe  mon_jeu.py
+  Linux   :  ./aka-py-sim    mon_jeu.py
+
+Le chemin passé est celui du script Python à exécuter. Les modules qu'il
+importe (game8266, upygame, ...) doivent être dans le même dossier, exactement
+comme sur la carte SD de la console (dossier /py).
+
+Sous Windows, le fichier SDL2.dll fourni doit rester à côté de aka-py-sim.exe.
+
+---------------------------------------------------------------------------
+ Clavier
+---------------------------------------------------------------------------
+
+  Flèches .............. Croix directionnelle (D-Pad)
+  Espace / Entrée ...... bouton A
+  X .................... bouton B
+  C .................... bouton C
+  V .................... bouton D
+  Maj gauche ........... L1
+  Maj droite ........... R1
+  Tab .................. bouton MENU
+  I J K L .............. manette analogique (aka.joystick)
+  Échap ................ quitter
+
+Remarque : on n'utilise pas la touche « M » pour le menu. Les touches sont
+lues par POSITION physique ; un « M » de clavier QWERTY tombe sur « , » en
+AZERTY. Tab est au même endroit sur tous les claviers.
+
+---------------------------------------------------------------------------
+ Simulateur sans fenêtre (tests)
+---------------------------------------------------------------------------
+
+aka-py-sim-headless se pilote par variables d'environnement :
+
+  AKA_FRAMES=N        nombre de frames avant de quitter (défaut 300)
+  AKA_SHOT=img.ppm    écrit le framebuffer en image PPM
+  AKA_SHOT_FRAME=K    frame capturée (défaut : la dernière)
+  AKA_PRESS=a:2:5,... boutons maintenus : nom:de:à (en frames)
+                      noms : up down left right a b c d run menu l1 r1
+  AKA_LANG=fr|en      langue renvoyée par aka.language()
+
+Exemple :
+  AKA_FRAMES=60 AKA_SHOT=sortie.ppm ./aka-py-sim-headless demo.py
+===========================================================================
