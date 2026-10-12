@@ -306,7 +306,10 @@ modules standard les plus utiles au jeu sont activés dans `mpconfigport.h` :
 > (namedtuple, deque, OrderedDict), `micropython` (`const`, `mem_info`),
 > `time` (ticks_ms/us, ticks_diff/add, sleep/sleep_ms/sleep_us), ainsi que
 > `sys`, `gc`, `io`. Voir la **calculatrice scientifique**
-> (`calculatrice.py`) pour un exemple complet utilisant `math`.
+> (`calculatrice.py`) pour un exemple complet utilisant `math`, et
+> **`feu_artifice.py`** pour une démo combinant `math`, `random`, `time`,
+> `collections`, `array`, `struct`, `json` et `micropython` (sauvegarde
+> binaire + stats JSON).
 >
 > Toujours absents (peu utiles ici, non activés) : `os` (pas de VFS — utilise
 > `aka.list_py()`, `aka.file_read/write()` et `open()`), `re`, `cmath`,

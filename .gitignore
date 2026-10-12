@@ -15,6 +15,10 @@ sdkconfig.orig_reference
 # Build du simulateur PC (sim/)
 /build-sim/
 
+# Sauvegardes ecrites par les demos a l'execution (ex: feu_artifice)
+/sdcard_files/py/*.sav
+/sdcard_files/py/feu_artifice_stats.json
+
 # Editeur / OS
 *.swp
 *~
