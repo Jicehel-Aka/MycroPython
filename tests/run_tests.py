@@ -83,7 +83,7 @@ def run_source(src, frames=2):
 
 # --- Jeux qui importent game8266/upygame (ex-crash à l'import) ---------------
 GAMES = ["demo", "pong", "snake", "invader", "breakout", "puissance4",
-         "tetris", "bataille_navale", "calculatrice"]
+         "tetris", "bataille_navale", "calculatrice", "feu_artifice"]
 
 print("== Simulateur MicroPython-AKA : tests ==")
 print(f"   binaire : {BIN}")
@@ -173,6 +173,34 @@ check("CH 1" in out, "random.choice correct")
 check("JS 2" in out, "json round-trip correct")
 check("TD 3" in out, "time.ticks_diff correct")
 check("MC 5" in out, "micropython.const correct")
+
+# --- Vérif ciblée : démo multi-modules (feu d'artifice) + persistance -------
+if os.path.exists(os.path.join(PYDIR, "feu_artifice.py")):
+    print("[feu_artifice — multi-modules + persistance struct/json]")
+    import json as _json
+    import struct as _struct
+    sav = os.path.join(OUT, "feu_artifice.sav")
+    js = os.path.join(OUT, "feu_artifice_stats.json")
+    for f in (sav, js):
+        if os.path.exists(f):
+            os.remove(f)
+    # On lance depuis OUT (cwd) : la démo y écrit ses sauvegardes. On force des
+    # lancers avec A pour qu'il y ait des explosions (donc des stats à écrire).
+    env = dict(os.environ, AKA_FRAMES="60", AKA_PRESS="a:2:3,a:4:5,a:6:7")
+    r = subprocess.run([BIN, os.path.join(PYDIR, "feu_artifice.py")],
+                       env=env, cwd=OUT, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.PIPE, timeout=60)
+    check(r.returncode == 0, "feu_artifice: pas de crash")
+    if check(os.path.exists(sav), "feu_artifice: sauvegarde binaire .sav écrite (struct)"):
+        with open(sav, "rb") as f:
+            launches, best = _struct.unpack("<II", f.read(8))
+        check(launches >= 1, "feu_artifice: struct.unpack -> lancers >= 1")
+        check(best >= 1, "feu_artifice: struct.unpack -> record >= 1")
+    if check(os.path.exists(js), "feu_artifice: stats .json écrites (json)"):
+        with open(js) as f:
+            d = _json.load(f)
+        check("launches" in d and "best" in d and "runtime_s" in d,
+              "feu_artifice: json contient launches/best/runtime_s")
 
 print(f"\n== {checks - fails}/{checks} vérifications OK ==")
 sys.exit(1 if fails else 0)

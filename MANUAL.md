@@ -302,7 +302,9 @@ modules most useful for games are enabled in `mpconfigport.h`:
 > (namedtuple, deque, OrderedDict), `micropython` (`const`, `mem_info`),
 > `time` (ticks_ms/us, ticks_diff/add, sleep/sleep_ms/sleep_us), plus `sys`,
 > `gc`, `io`. See the **scientific calculator** (`calculatrice.py`) for a
-> full example using `math`.
+> full example using `math`, and **`feu_artifice.py`** for a demo combining
+> `math`, `random`, `time`, `collections`, `array`, `struct`, `json` and
+> `micropython` (binary save + JSON stats).
 >
 > Still absent (not useful here, left off): `os` (no VFS — use
 > `aka.list_py()`, `aka.file_read/write()` and `open()`), `re`, `cmath`,
