@@ -5,6 +5,7 @@ jeux écrits en **Python** (`.py`) depuis la carte SD, via un module natif `aka`
 qui expose l'écran, les boutons, l'audio, le temps et la SD.
 
 - 📖 Mode d'emploi utilisateur : **[MANUEL.md](MANUEL.md)** (français) · **[MANUAL.md](MANUAL.md)** (English)
+- 💻 Simulateur PC (jouer/tester sans matériel, Windows & Linux) : **[docs/SIMULATEUR_PC.md](docs/SIMULATEUR_PC.md)**
 - ⚖️ Licences : code du projet sous [MIT](LICENSE) ; cœur MicroPython sous
   [MIT](LICENSE.micropython) (© 2013-2026 Damien P. George).
 
