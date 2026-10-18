@@ -11,6 +11,9 @@
 #include <dirent.h>
 #include <sys/stat.h>   // mkdir
 #include <errno.h>
+#ifdef _WIN32
+#include <direct.h>     // _mkdir (MinGW : mkdir n'a qu'un argument)
+#endif
 
 #include "py/compile.h"
 #include "py/gc.h"
@@ -659,7 +662,11 @@ static MP_DEFINE_CONST_FUN_OBJ_0(aka_volume_obj, aka_volume);
 // meme mecanisme eprouve qu'opendir/fopen ; voir note sur stat() plus haut).
 static mp_obj_t aka_mkdir(mp_obj_t path_obj) {
     const char *path = mp_obj_str_get_str(path_obj);
-    int r = mkdir(path, 0777);
+#ifdef _WIN32
+    int r = _mkdir(path);          // MinGW (simulateur Windows) : un seul argument
+#else
+    int r = mkdir(path, 0777);     // ESP-IDF / Linux : POSIX deux arguments
+#endif
     return mp_obj_new_bool(r == 0 || errno == EEXIST);
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(aka_mkdir_obj, aka_mkdir);
