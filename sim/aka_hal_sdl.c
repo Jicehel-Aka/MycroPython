@@ -188,6 +188,18 @@ int  aka_hal_is_vibrating(void) { return (g_vibrate_end != 0 && g_vclock_ms < g_
 const char *aka_hal_language(void) { const char *e = getenv("AKA_LANG"); return (e && *e) ? e : "fr"; }
 const char *aka_hal_tr(const char *key) { return key; }
 
+/* Fonctions systeme : simulees (pas de materiel reel cote PC). */
+static int g_brightness = 100, g_volume = 80;
+void aka_hal_set_brightness(int percent) { g_brightness = percent < 0 ? 0 : (percent > 100 ? 100 : percent); }
+int  aka_hal_brightness(void) { return g_brightness; }
+int  aka_hal_battery_percent(void) { return 100; }
+void aka_hal_power_off(void) { printf("[sim] aka.power_off()\n"); }
+void aka_hal_return_to_loader(void) { printf("[sim] aka.loader()\n"); }
+void aka_hal_tone(int freq_hz, int duration_ms) { (void)freq_hz; (void)duration_ms; }
+void aka_hal_no_tone(void) {}
+void aka_hal_set_volume(int percent) { g_volume = percent < 0 ? 0 : (percent > 100 ? 100 : percent); }
+int  aka_hal_volume(void) { return g_volume; }
+
 int aka_hal_screenshot(void) {
     sim_init();
     const uint16_t *fb = aka_gfx_fb();

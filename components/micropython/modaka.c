@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+#include <sys/stat.h>   // mkdir
+#include <errno.h>
 
 #include "py/compile.h"
 #include "py/gc.h"
@@ -613,6 +615,55 @@ static mp_obj_t aka_list_py(mp_obj_t dir) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(aka_list_py_obj, aka_list_py);
 
+// --- Fonctions systeme (luminosite, batterie, son/tone, alimentation) -------
+static mp_obj_t aka_set_brightness(mp_obj_t p) {
+    aka_hal_set_brightness((int)mp_obj_get_int(p));
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(aka_set_brightness_obj, aka_set_brightness);
+
+static mp_obj_t aka_brightness(void) { return mp_obj_new_int(aka_hal_brightness()); }
+static MP_DEFINE_CONST_FUN_OBJ_0(aka_brightness_obj, aka_brightness);
+
+static mp_obj_t aka_battery(void) { return mp_obj_new_int(aka_hal_battery_percent()); }
+static MP_DEFINE_CONST_FUN_OBJ_0(aka_battery_obj, aka_battery);
+
+static mp_obj_t aka_power_off(void) { aka_hal_power_off(); return mp_const_none; }
+static MP_DEFINE_CONST_FUN_OBJ_0(aka_power_off_obj, aka_power_off);
+
+static mp_obj_t aka_loader(void) { aka_hal_return_to_loader(); return mp_const_none; }
+static MP_DEFINE_CONST_FUN_OBJ_0(aka_loader_obj, aka_loader);
+
+// aka.tone(frequence_hz, duree_ms=200) -- bip carre (chiptune).
+static mp_obj_t aka_tone(size_t n_args, const mp_obj_t *args) {
+    int f = mp_obj_get_int(args[0]);
+    int d = (n_args > 1) ? mp_obj_get_int(args[1]) : 200;
+    aka_hal_tone(f, d);
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(aka_tone_obj, 1, 2, aka_tone);
+
+static mp_obj_t aka_no_tone(void) { aka_hal_no_tone(); return mp_const_none; }
+static MP_DEFINE_CONST_FUN_OBJ_0(aka_no_tone_obj, aka_no_tone);
+
+static mp_obj_t aka_set_volume(mp_obj_t p) {
+    aka_hal_set_volume((int)mp_obj_get_int(p));
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(aka_set_volume_obj, aka_set_volume);
+
+static mp_obj_t aka_volume(void) { return mp_obj_new_int(aka_hal_volume()); }
+static MP_DEFINE_CONST_FUN_OBJ_0(aka_volume_obj, aka_volume);
+
+// aka.mkdir(chemin) -> True/False. Cree un repertoire sur la carte SD (POSIX,
+// meme mecanisme eprouve qu'opendir/fopen ; voir note sur stat() plus haut).
+static mp_obj_t aka_mkdir(mp_obj_t path_obj) {
+    const char *path = mp_obj_str_get_str(path_obj);
+    int r = mkdir(path, 0777);
+    return mp_obj_new_bool(r == 0 || errno == EEXIST);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(aka_mkdir_obj, aka_mkdir);
+
 // ---------------------------------------------------------------------------
 // Table du module.
 // ---------------------------------------------------------------------------
@@ -674,6 +725,17 @@ static const mp_rom_map_elem_t aka_module_globals_table[] = {
     // aide integree au menu systeme
     { MP_ROM_QSTR(MP_QSTR_set_controls), MP_ROM_PTR(&aka_set_controls_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_credits),  MP_ROM_PTR(&aka_set_credits_obj) },
+    // fonctions systeme
+    { MP_ROM_QSTR(MP_QSTR_set_brightness), MP_ROM_PTR(&aka_set_brightness_obj) },
+    { MP_ROM_QSTR(MP_QSTR_brightness),     MP_ROM_PTR(&aka_brightness_obj) },
+    { MP_ROM_QSTR(MP_QSTR_battery),        MP_ROM_PTR(&aka_battery_obj) },
+    { MP_ROM_QSTR(MP_QSTR_power_off),      MP_ROM_PTR(&aka_power_off_obj) },
+    { MP_ROM_QSTR(MP_QSTR_loader),         MP_ROM_PTR(&aka_loader_obj) },
+    { MP_ROM_QSTR(MP_QSTR_tone),           MP_ROM_PTR(&aka_tone_obj) },
+    { MP_ROM_QSTR(MP_QSTR_no_tone),        MP_ROM_PTR(&aka_no_tone_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_volume),     MP_ROM_PTR(&aka_set_volume_obj) },
+    { MP_ROM_QSTR(MP_QSTR_volume),         MP_ROM_PTR(&aka_volume_obj) },
+    { MP_ROM_QSTR(MP_QSTR_mkdir),          MP_ROM_PTR(&aka_mkdir_obj) },
     // constantes touches
     { MP_ROM_QSTR(MP_QSTR_UP),    MP_ROM_INT(AKA_KEY_UP) },
     { MP_ROM_QSTR(MP_QSTR_DOWN),  MP_ROM_INT(AKA_KEY_DOWN) },

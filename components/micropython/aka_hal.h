@@ -78,6 +78,23 @@ int  aka_hal_is_sound_playing(void);
 // Ne pas appeler directement depuis modaka.c/Python -- interne au HAL.
 void aka_hal_sound_service(void);
 
+// --- Fonctions systeme ---
+// Luminosite de l'ecran (0..100 %).
+void aka_hal_set_brightness(int percent);
+int  aka_hal_brightness(void);
+// Niveau de batterie en pourcentage (0..100).
+int  aka_hal_battery_percent(void);
+// Eteint la console.
+void aka_hal_power_off(void);
+// Revient au loader (menu de lancement des jeux).
+void aka_hal_return_to_loader(void);
+// Joue un bip carre (chiptune) de frequence (Hz) pendant duree (ms) ; no_tone l'arrete.
+void aka_hal_tone(int freq_hz, int duration_ms);
+void aka_hal_no_tone(void);
+// Volume general (0..100 %).
+void aka_hal_set_volume(int percent);
+int  aka_hal_volume(void);
+
 // --- Aide integree au menu systeme AKA ---
 // Lignes d'aide affichees dans l'ecran "Commandes" du menu (touche MENU).
 void aka_hal_set_controls(const char *const *lines, int n);

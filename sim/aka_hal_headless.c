@@ -120,6 +120,18 @@ void aka_hal_vibrate(uint32_t ms) { (void)ms; }
 int aka_hal_is_vibrating(void) { return 0; }
 const char *aka_hal_language(void) { return "fr"; }
 const char *aka_hal_tr(const char *key) { return key; }
+
+/* Fonctions systeme : simulees (headless). */
+static int g_brightness = 100, g_volume = 80;
+void aka_hal_set_brightness(int percent) { g_brightness = percent < 0 ? 0 : (percent > 100 ? 100 : percent); }
+int  aka_hal_brightness(void) { return g_brightness; }
+int  aka_hal_battery_percent(void) { return 100; }
+void aka_hal_power_off(void) {}
+void aka_hal_return_to_loader(void) {}
+void aka_hal_tone(int freq_hz, int duration_ms) { (void)freq_hz; (void)duration_ms; }
+void aka_hal_no_tone(void) {}
+void aka_hal_set_volume(int percent) { g_volume = percent < 0 ? 0 : (percent > 100 ? 100 : percent); }
+int  aka_hal_volume(void) { return g_volume; }
 int aka_hal_screenshot(void) { return 0; }
 void aka_hal_play_pcm8(const uint8_t *d, size_t n, int loop) { (void)d; (void)n; (void)loop; }
 int aka_hal_is_sound_playing(void) { return 0; }
