@@ -9,6 +9,9 @@
 #include "gb_ll_common.h"     // EXPANDER_KEY_*, JOYX_MID
 #include "gb_audio_player.h"
 #include "gb_audio_track_wav.h"
+#include "gb_audio_track_tone.h"
+#include "gb_ll_adc.h"
+#include "gb_ll_expander.h"
 #include "core/input.h"
 #include "aka_runtime/aka_runtime.h"
 
@@ -188,6 +191,34 @@ void aka_hal_sound_service(void) {
         s_sfx_track.play_raw(s_sfx_buffer, s_sfx_sample_count);
     }
 }
+// --- Fonctions systeme ---
+void aka_hal_set_brightness(int percent) {
+    if (percent < 0) percent = 0;
+    if (percent > 100) percent = 100;
+    gfx.set_backlight_percent((uint8_t)percent);
+}
+int aka_hal_brightness(void)        { return gfx.get_backlight_percent(); }
+int aka_hal_battery_percent(void)   { return gb_ll_adc_read_vbatt_percent(); }
+void aka_hal_power_off(void)        { gb_ll_expander_power_off(); }
+void aka_hal_return_to_loader(void) { akaRuntime.returnToLoader(); }
+
+static gb_audio_track_tone s_tone_track;
+static bool s_tone_added = false;
+void aka_hal_tone(int freq_hz, int duration_ms) {
+    if (!s_tone_added) { g_audio_player.add_track(&s_tone_track, 1.0f); s_tone_added = true; }
+    if (duration_ms <= 0) duration_ms = 200;
+    if (freq_hz < 1) freq_hz = 1;
+    s_tone_track.play_tone((float)freq_hz, 1.0f, (uint16_t)duration_ms, gb_audio_track_tone::SQUARE);
+}
+void aka_hal_no_tone(void) { if (s_tone_added) s_tone_track.stop_playing(); }
+
+void aka_hal_set_volume(int percent) {
+    if (percent < 0) percent = 0;
+    if (percent > 100) percent = 100;
+    g_audio_player.set_master_volume((uint8_t)(percent * 255 / 100));
+}
+int aka_hal_volume(void) { return (int)g_audio_player.get_master_volume() * 100 / 255; }
+
 const char *aka_hal_language(void)    { return akaRuntime.getLanguage(); }
 const char *aka_hal_tr(const char *k) { return akaRuntime.translate(k); }
 int aka_hal_screenshot(void)          { return akaRuntime.takeScreenshot() ? 1 : 0; }
