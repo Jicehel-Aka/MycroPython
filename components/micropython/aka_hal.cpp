@@ -193,7 +193,8 @@ void aka_hal_sound_service(void) {
 }
 // --- Fonctions systeme ---
 void aka_hal_set_brightness(int percent) {
-    if (percent < 0) percent = 0; if (percent > 100) percent = 100;
+    if (percent < 0) percent = 0;
+    if (percent > 100) percent = 100;
     gfx.set_backlight_percent((uint8_t)percent);
 }
 int aka_hal_brightness(void)        { return gfx.get_backlight_percent(); }
@@ -212,7 +213,8 @@ void aka_hal_tone(int freq_hz, int duration_ms) {
 void aka_hal_no_tone(void) { if (s_tone_added) s_tone_track.stop_playing(); }
 
 void aka_hal_set_volume(int percent) {
-    if (percent < 0) percent = 0; if (percent > 100) percent = 100;
+    if (percent < 0) percent = 0;
+    if (percent > 100) percent = 100;
     g_audio_player.set_master_volume((uint8_t)(percent * 255 / 100));
 }
 int aka_hal_volume(void) { return (int)g_audio_player.get_master_volume() * 100 / 255; }
